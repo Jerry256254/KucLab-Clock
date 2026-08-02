@@ -3,6 +3,13 @@
 Nativní Android hodiny, budík, časovač a stopky — bez reklam, bez sledování,
 bez zbytečných oprávnění. Otevřený zdrojový kód pod licencí MIT.
 
+[![Stáhnout nejnovější APK](https://img.shields.io/github/v/release/Jerry256254/KucLab-Clock?label=St%C3%A1hnout%20APK&style=for-the-badge&color=D97757)](https://github.com/Jerry256254/KucLab-Clock/releases/latest)
+
+**➡️ [Stáhnout .apk z poslední verze](https://github.com/Jerry256254/KucLab-Clock/releases/latest)** —
+žádná registrace, žádný obchod, jen soubor ke stažení a instalaci (v
+telefonu je potřeba povolit instalaci z neznámých zdrojů, protože appka
+není z Play Store).
+
 ## Funkce
 
 - **Hodiny** — velký ciferník s přesnými sekundami a datem.
