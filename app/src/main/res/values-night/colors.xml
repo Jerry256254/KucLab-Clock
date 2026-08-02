@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- App theme background/status/nav bar (dark - matches ClaudeDark.bg in Theme.kt) -->
+    <color name="bg">#211F1B</color>
+    <color name="accent">#E08659</color>
+
+    <!-- Home-screen widget: dark variant -->
+    <color name="widget_bg_fill">#2E2C24</color>
+    <color name="widget_bg_stroke">#3D3A30</color>
+    <color name="widget_time">#F3EFE4</color>
+    <color name="widget_status">#E08659</color>
+</resources>

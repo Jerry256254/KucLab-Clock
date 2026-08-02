@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- App theme background/status/nav bar (light - matches ClaudeLight.bg in Theme.kt) -->
+    <color name="bg">#F9F7F2</color>
+    <color name="accent">#D97757</color>
+
+    <!-- Adaptive launcher icon background -->
+    <color name="ic_launcher_background">#D97757</color>
+
+    <!-- Home-screen widget: light variant (overridden in values-night) -->
+    <color name="widget_bg_fill">#FFFFFF</color>
+    <color name="widget_bg_stroke">#E7E3D6</color>
+    <color name="widget_time">#27251F</color>
+    <color name="widget_status">#D97757</color>
+</resources>

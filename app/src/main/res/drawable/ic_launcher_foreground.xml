@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Simple original clock mark: a ring, two hands at a classic ten-past-ten angle, and a
+     center pivot dot - drawn in cream on the accent-orange adaptive icon background. Sized
+     to sit well inside the adaptive icon's safe zone (viewport 108x108, mark within the
+     center ~60dp) so it survives circle/squircle/rounded-square OS masking. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <path
+        android:pathData="M54,24 A30,30 0 1,1 53.9,24"
+        android:strokeColor="#FDFBF7"
+        android:strokeWidth="6.5"
+        android:strokeLineCap="round"
+        android:fillColor="#00000000" />
+    <path
+        android:pathData="M54,54 L54,36"
+        android:strokeColor="#FDFBF7"
+        android:strokeWidth="6.5"
+        android:strokeLineCap="round" />
+    <path
+        android:pathData="M54,54 L69,45"
+        android:strokeColor="#FDFBF7"
+        android:strokeWidth="6.5"
+        android:strokeLineCap="round" />
+    <path
+        android:pathData="M54,54 m-4.2,0 a4.2,4.2 0 1,0 8.4,0 a4.2,4.2 0 1,0 -8.4,0"
+        android:fillColor="#FDFBF7" />
+</vector>
