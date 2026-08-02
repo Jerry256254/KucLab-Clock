@@ -101,6 +101,11 @@ fun TimerScreen() {
                     fraction, claudeSpring(), label = "timerRing"
                 )
 
+                // Canvas's onDraw lambda runs in the draw phase, not composition, so the
+                // theme colors (backed by a CompositionLocal, which needs @Composable
+                // context) are resolved here and captured as plain Color values.
+                val trackColor = TrackBg
+                val accentColor = Accent
                 Box(contentAlignment = Alignment.Center) {
                     Box(
                         Modifier
@@ -110,14 +115,14 @@ fun TimerScreen() {
                     Canvas(Modifier.size(224.dp)) {
                         val stroke = 12.dp.toPx()
                         drawArc(
-                            color = TrackBg,
+                            color = trackColor,
                             startAngle = -90f,
                             sweepAngle = 360f,
                             useCenter = false,
                             style = Stroke(width = stroke, cap = StrokeCap.Round)
                         )
                         drawArc(
-                            color = Accent,
+                            color = accentColor,
                             startAngle = -90f,
                             sweepAngle = 360f * animatedFraction,
                             useCenter = false,
