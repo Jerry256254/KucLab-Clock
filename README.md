@@ -9,8 +9,16 @@ bez zbytečných oprávnění. Otevřený zdrojový kód pod licencí MIT.
 - **Budík**
   - libovolný počet budíků, opakování podle dní v týdnu
   - vyzvánění: výběr ze systémových tónů nebo tří vestavěných tónů appky
-  - volitelné odložení (nastavitelný počet minut)
-  - volitelné vypnutí jen po vyřešení matematických příkladů
+  - volitelné odložení (nastavitelný počet minut) — lze u konkrétního budíku i
+    úplně vypnout
+  - volitelné, vzájemně kombinovatelné "vypínací úkoly": matematické
+    příklady, počet kroků (krokoměr — donutí vás doopravdy vstát a chodit)
+    nebo počet zatřesení telefonem; dokud nejsou splněné všechny zapnuté
+    úkoly, budík nejde vypnout
+  - zvonící budík nejde opustit tlačítkem zpět, přepnutím na plochu ani přes
+    naposledy použité aplikace — pokusí se vrátit zpátky na obrazovku (v
+    mezích toho, co Android běžné appce vůbec dovolí — telefon zůstává
+    použitelný pro tísňová volání)
   - spolehlivé buzení i při zamčené obrazovce a v úsporném režimu baterie
 - **Časovač**
   - nastavení posuvníkem nebo rychlými předvolbami (1/5/10/15/30 min)

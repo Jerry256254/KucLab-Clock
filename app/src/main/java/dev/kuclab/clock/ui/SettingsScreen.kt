@@ -253,13 +253,28 @@ fun SettingsScreen() {
                 "1. Budík zazvoní přesně v nastavený čas a zobrazí se přes celou obrazovku, " +
                     "i když je telefon zamčený.\n" +
                     "2. Zvonění sílí a telefon vibruje, dokud budík nevypnete.\n" +
-                    "3. Budík nelze vypnout tlačítkem zpět — musíte vyřešit početní příklady " +
-                    "(volitelné). Tlačítkem „Odložit“ získáte pár minut navíc — obojí si " +
-                    "nastavíte přímo u budíku.",
+                    "3. Budík nelze vypnout tlačítkem zpět, přepnutím na plochu ani přes " +
+                    "naposledy použité aplikace — pokusí se vrátit se zpět na obrazovku, " +
+                    "dokud úkol nesplníte.\n" +
+                    "4. U jednotlivého budíku si můžete zapnout jeden nebo víc „vypínacích " +
+                    "úkolů“: matematické příklady, pár kroků (počítá krokoměr — donutí vás " +
+                    "doopravdy vstát a chodit) nebo zatřesení telefonem. Dokud nesplníte " +
+                    "všechny zapnuté úkoly, budík nejde vypnout.\n" +
+                    "5. Tlačítkem „Odložit“ získáte pár minut navíc, pokud jste ho u " +
+                    "konkrétního budíku nevypnuli.",
                 color = Muted,
                 fontSize = 13.sp,
                 lineHeight = 19.sp,
                 modifier = Modifier.padding(top = 6.dp)
+            )
+            Text(
+                "Android z principu nedovolí žádné běžné appce udělat telefon úplně " +
+                    "nepoužitelný (kvůli tísňovým voláním a bezpečnosti) — appka proto dělá " +
+                    "vše, co je v jejích mezích možné, aby útěk co nejvíc znesnadnila.",
+                color = Muted,
+                fontSize = 12.sp,
+                lineHeight = 17.sp,
+                modifier = Modifier.padding(top = 10.dp)
             )
         }
 

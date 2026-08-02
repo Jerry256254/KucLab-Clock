@@ -278,6 +278,10 @@ private fun AlarmEditDialog(
     var snoozeMinutes by remember(initial?.id) { mutableStateOf((initial?.snoozeMinutes ?: 5).toFloat()) }
     var math by remember(initial?.id) { mutableStateOf(initial?.math ?: true) }
     var mathCount by remember(initial?.id) { mutableStateOf((initial?.mathCount ?: 3).toFloat()) }
+    var stepsRequired by remember(initial?.id) { mutableStateOf(initial?.stepsRequired ?: false) }
+    var stepsCount by remember(initial?.id) { mutableStateOf((initial?.stepsCount ?: 20).toFloat()) }
+    var shakeRequired by remember(initial?.id) { mutableStateOf(initial?.shakeRequired ?: false) }
+    var shakeCount by remember(initial?.id) { mutableStateOf((initial?.shakeCount ?: 15).toFloat()) }
     var ringtoneUri by remember(initial?.id) { mutableStateOf(initial?.ringtoneUri) }
 
     // The M3 TimePicker has no built-in haptic callback of its own, so a tick is fired here
@@ -479,6 +483,64 @@ private fun AlarmEditDialog(
                 }
             }
 
+            Spacer(Modifier.height(10.dp))
+            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                Column(Modifier.weight(1f)) {
+                    Text("Vypnutí jen po pár krocích", color = OnDark)
+                    Text("Nutí vás doopravdy vstát a chodit", color = Muted, fontSize = 12.sp)
+                }
+                Switch(
+                    checked = stepsRequired,
+                    onCheckedChange = { haptics.tap(); stepsRequired = it },
+                    colors = SwitchDefaults.colors(checkedTrackColor = Accent)
+                )
+            }
+            if (stepsRequired) {
+                Column(
+                    Modifier.fillMaxWidth().padding(top = 12.dp, bottom = 6.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Text("Počet kroků: ${stepsCount.toInt()}", color = OnDark, fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                    Spacer(Modifier.height(10.dp))
+                    HapticSlider(
+                        value = stepsCount,
+                        onValueChange = { stepsCount = it },
+                        valueRange = 5f..100f,
+                        stepSize = 5f,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
+            }
+
+            Spacer(Modifier.height(10.dp))
+            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                Column(Modifier.weight(1f)) {
+                    Text("Vypnutí jen po zatřesení", color = OnDark)
+                    Text("Nutí vás pořádně zamávat telefonem", color = Muted, fontSize = 12.sp)
+                }
+                Switch(
+                    checked = shakeRequired,
+                    onCheckedChange = { haptics.tap(); shakeRequired = it },
+                    colors = SwitchDefaults.colors(checkedTrackColor = Accent)
+                )
+            }
+            if (shakeRequired) {
+                Column(
+                    Modifier.fillMaxWidth().padding(top = 12.dp, bottom = 6.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Text("Počet zatřesení: ${shakeCount.toInt()}", color = OnDark, fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                    Spacer(Modifier.height(10.dp))
+                    HapticSlider(
+                        value = shakeCount,
+                        onValueChange = { shakeCount = it },
+                        valueRange = 5f..40f,
+                        stepSize = 5f,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
+            }
+
             Spacer(Modifier.height(24.dp))
             Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                 val saveInteraction = remember { MutableInteractionSource() }
@@ -497,7 +559,11 @@ private fun AlarmEditDialog(
                                 math = math,
                                 snoozeMinutes = snoozeMinutes.toInt(),
                                 mathCount = mathCount.toInt(),
-                                ringtoneUri = ringtoneUri
+                                ringtoneUri = ringtoneUri,
+                                stepsRequired = stepsRequired,
+                                stepsCount = stepsCount.toInt(),
+                                shakeRequired = shakeRequired,
+                                shakeCount = shakeCount.toInt()
                             )
                         )
                     },

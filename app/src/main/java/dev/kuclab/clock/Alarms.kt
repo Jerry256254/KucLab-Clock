@@ -17,7 +17,13 @@ data class Alarm(
     val mathCount: Int = 3,
     // null = system default alarm ringtone. Otherwise either a content:// URI picked via
     // RingtoneManager, or one of BuiltInTones' android.resource:// URIs.
-    val ringtoneUri: String? = null
+    val ringtoneUri: String? = null,
+    // Extra "prove you're actually up" gates, independent of and stackable with math - all
+    // enabled ones must be cleared before the alarm can be switched off, same as math.
+    val stepsRequired: Boolean = false,
+    val stepsCount: Int = 20,
+    val shakeRequired: Boolean = false,
+    val shakeCount: Int = 15
 ) {
     fun toJson(): JSONObject = JSONObject().apply {
         put("id", id)
@@ -30,6 +36,10 @@ data class Alarm(
         put("snoozeMinutes", snoozeMinutes)
         put("mathCount", mathCount)
         put("ringtoneUri", ringtoneUri)
+        put("stepsRequired", stepsRequired)
+        put("stepsCount", stepsCount)
+        put("shakeRequired", shakeRequired)
+        put("shakeCount", shakeCount)
         put("days", JSONArray().apply { days.forEach { put(it) } })
     }
 
@@ -50,7 +60,11 @@ data class Alarm(
                 math = o.optBoolean("math", true),
                 snoozeMinutes = o.optInt("snoozeMinutes", 5),
                 mathCount = o.optInt("mathCount", 3),
-                ringtoneUri = if (!o.has("ringtoneUri") || o.isNull("ringtoneUri")) null else o.getString("ringtoneUri")
+                ringtoneUri = if (!o.has("ringtoneUri") || o.isNull("ringtoneUri")) null else o.getString("ringtoneUri"),
+                stepsRequired = o.optBoolean("stepsRequired", false),
+                stepsCount = o.optInt("stepsCount", 20),
+                shakeRequired = o.optBoolean("shakeRequired", false),
+                shakeCount = o.optInt("shakeCount", 15)
             )
         }
 

@@ -64,11 +64,21 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
+        val missing = mutableListOf<String>()
         if (Build.VERSION.SDK_INT >= 33 &&
-            checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) !=
-            PackageManager.PERMISSION_GRANTED
+            checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED
         ) {
-            requestPermissions(arrayOf(Manifest.permission.POST_NOTIFICATIONS), 10)
+            missing += Manifest.permission.POST_NOTIFICATIONS
+        }
+        // Needed for the alarm's optional step-counting "prove you're up" gate - requested
+        // up front so it's already granted by the time an alarm actually rings.
+        if (Build.VERSION.SDK_INT >= 29 &&
+            checkSelfPermission(Manifest.permission.ACTIVITY_RECOGNITION) != PackageManager.PERMISSION_GRANTED
+        ) {
+            missing += Manifest.permission.ACTIVITY_RECOGNITION
+        }
+        if (missing.isNotEmpty()) {
+            requestPermissions(missing.toTypedArray(), 10)
         }
 
         setContent {
