@@ -2,9 +2,9 @@
 schema_version: 1
 app_name: KucLab Clock
 package_id: dev.kuclab.clock
-version_name: "1.1"
-version_code: 2
-last_updated: 2026-08-02
+version_name: "1.2"
+version_code: 3
+last_updated: 2026-08-10
 license: MIT
 category: Nástroje
 short_description: >-
@@ -46,6 +46,14 @@ screenshots:
   - store/screenshots/03_stopky.png
   - store/screenshots/04_casovac.png
 changelog:
+  - version: "1.2"
+    date: 2026-08-10
+    notes:
+      - Zvonící budík jde nyní opustit prakticky nemožné - hlídač ho vrátí zpět i po Recents/přepnutí appky, ne jen po Home
+      - Widget se u běžícího časovače/stopek/budíku aktualizuje spolehlivě, ne jen jednou za hodinu
+      - Widget je klikatelný - otevře appku rovnou na obrazovce dané události
+      - Nastavení: stav oprávnění se po návratu ze systémových nastavení aktualizuje sám
+      - Nastavení: tlačítko pro ruční kontrolu dostupné aktualizace appky
   - version: "1.1"
     date: 2026-08-02
     notes:

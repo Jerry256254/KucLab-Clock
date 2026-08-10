@@ -38,6 +38,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import dev.kuclab.clock.TimerScheduler
+import dev.kuclab.clock.TimerService
 import dev.kuclab.clock.TimerState
 import dev.kuclab.clock.WidgetRefresh
 import kotlinx.coroutines.delay
@@ -69,6 +70,7 @@ fun TimerScreen() {
         val at = System.currentTimeMillis() + ms
         TimerScheduler.schedule(ctx, at)
         TimerState.save(ctx, running = true, endAtWallClock = at, totalMs = ms)
+        TimerService.start(ctx, at)
         WidgetRefresh.requestUpdate(ctx)
         alarmAt = SystemClock.elapsedRealtime() + ms
     }
@@ -76,6 +78,7 @@ fun TimerScreen() {
     fun cancel() {
         TimerScheduler.cancel(ctx)
         TimerState.clear(ctx)
+        TimerService.stop(ctx)
         WidgetRefresh.requestUpdate(ctx)
     }
 

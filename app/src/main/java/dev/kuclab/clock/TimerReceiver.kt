@@ -12,6 +12,7 @@ class TimerReceiver : BroadcastReceiver() {
         // isTimer branch and AlarmActivity's simplified isTimer path) - it just rings and
         // posts a persistent notification with Stop/+1 min actions.
         TimerState.save(context, running = false, endAtWallClock = 0L, totalMs = 0L)
+        TimerService.stop(context)
         AlarmService.start(context, -1L, "Časovač", isTimer = true)
         WidgetRefresh.requestUpdate(context)
     }

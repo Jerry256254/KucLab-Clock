@@ -1,11 +1,13 @@
 package dev.kuclab.clock
 
 import android.Manifest
+import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -61,8 +63,15 @@ import dev.kuclab.clock.ui.tap
 
 class MainActivity : ComponentActivity() {
 
+    // Backs both a fresh launch (set once in onCreate) and the app already running in the
+    // background (updated in onNewIntent) - e.g. tapping the widget or the running-timer/
+    // stopwatch notification, which both carry a "tab" extra for the relevant screen. Plain
+    // mutableStateOf (not remember{}) so onNewIntent can update it from outside composition.
+    private var requestedTab by mutableStateOf<Int?>(null)
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        requestedTab = intent.getIntExtra("tab", -1).takeIf { it in 0..4 }
 
         val missing = mutableListOf<String>()
         if (Build.VERSION.SDK_INT >= 33 &&
@@ -83,9 +92,15 @@ class MainActivity : ComponentActivity() {
 
         setContent {
             KucLabTheme {
-                MainScreen()
+                MainScreen(requestedTab) { requestedTab = null }
             }
         }
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        intent.getIntExtra("tab", -1).takeIf { it in 0..4 }?.let { requestedTab = it }
     }
 }
 
@@ -100,9 +115,16 @@ private val tabs = listOf(
 )
 
 @Composable
-fun MainScreen() {
+fun MainScreen(requestedTab: Int? = null, onRequestedTabConsumed: () -> Unit = {}) {
     var tab by rememberSaveable { mutableStateOf(0) }
     val stateHolder = rememberSaveableStateHolder()
+
+    LaunchedEffect(requestedTab) {
+        if (requestedTab != null) {
+            tab = requestedTab
+            onRequestedTabConsumed()
+        }
+    }
 
     Box(Modifier.fillMaxSize().background(Ink)) {
         Box(Modifier.fillMaxSize().padding(bottom = 76.dp)) {

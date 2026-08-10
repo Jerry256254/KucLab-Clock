@@ -88,8 +88,12 @@ import java.util.Locale
 class AlarmActivity : ComponentActivity() {
 
     private var isTimerFlag = false
-    private val relaunchHandler = Handler(Looper.getMainLooper())
-    private var relaunchRunnable: Runnable? = null
+    // True only while this activity itself opened an in-app system dialog (the
+    // step-counter permission prompt) - the watchdog below must not fight that dialog
+    // for the foreground.
+    private var awaitingSystemDialog = false
+    private val watchdogHandler = Handler(Looper.getMainLooper())
+    private var watchdogRunnable: Runnable? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -133,7 +137,7 @@ class AlarmActivity : ComponentActivity() {
 
     override fun onResume() {
         super.onResume()
-        cancelRelaunch()
+        stopWatchdog()
         // Screen-pin the task so Home/Recents can't leave the ringing screen behind - but
         // ONLY for a real alarm. A timer must never lock the task: it's meant to be
         // dismissible like any other notification-driven screen (see TimerReceiver).
@@ -145,38 +149,45 @@ class AlarmActivity : ComponentActivity() {
         }
     }
 
-    override fun onUserLeaveHint() {
-        super.onUserLeaveHint()
-        // startLockTask() alone isn't reliably enforced on every OEM/Android version for an
-        // app that isn't the device owner - some devices let Home through regardless. This
-        // is the practical backstop: if the user tries to leave via Home/Recents while a
-        // real alarm is still ringing, the ringing screen is brought straight back instead
-        // of staying backgrounded.
-        if (!isTimerFlag && AlarmService.isRinging) {
-            scheduleRelaunch()
+    override fun onPause() {
+        super.onPause()
+        // The actual backstop against "just leave the ringing screen": whenever this
+        // activity loses the foreground for ANY reason (Home, Recents, opening another app
+        // from the notification shade, a phone call, ...) while a real alarm is still
+        // ringing and we didn't finish() it ourselves, keep trying to bring it back - not
+        // just once (onUserLeaveHint alone missed cases like Recents/notification-shade
+        // launches on some Android versions/OEMs), but repeatedly every ~400ms, since a
+        // single relaunch attempt can itself race with whatever just took focus.
+        if (!isTimerFlag && AlarmService.isRinging && !isFinishing && !awaitingSystemDialog) {
+            startWatchdog()
         }
     }
 
-    private fun scheduleRelaunch() {
-        cancelRelaunch()
-        val r = Runnable {
-            if (!isTimerFlag && AlarmService.isRinging && !isFinishing) {
+    private fun startWatchdog() {
+        if (watchdogRunnable != null) return
+        val r = object : Runnable {
+            override fun run() {
+                if (isTimerFlag || !AlarmService.isRinging || isFinishing || awaitingSystemDialog) {
+                    watchdogRunnable = null
+                    return
+                }
                 try {
                     startActivity(
-                        Intent(this, AlarmActivity::class.java)
+                        Intent(this@AlarmActivity, AlarmActivity::class.java)
                             .addFlags(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT or Intent.FLAG_ACTIVITY_NEW_TASK)
                     )
                 } catch (_: Exception) {
                 }
+                watchdogHandler.postDelayed(this, 400)
             }
         }
-        relaunchRunnable = r
-        relaunchHandler.postDelayed(r, 350)
+        watchdogRunnable = r
+        watchdogHandler.postDelayed(r, 300)
     }
 
-    private fun cancelRelaunch() {
-        relaunchRunnable?.let { relaunchHandler.removeCallbacks(it) }
-        relaunchRunnable = null
+    private fun stopWatchdog() {
+        watchdogRunnable?.let { watchdogHandler.removeCallbacks(it) }
+        watchdogRunnable = null
     }
 
     override fun onNewIntent(intent: Intent) {
@@ -209,8 +220,10 @@ class AlarmActivity : ComponentActivity() {
                     shakeCount = alarm?.shakeCount ?: 15,
                     snoozeAllowed = isTimer || (alarm?.snooze ?: true),
                     snoozeLabel = if (isTimer) "Prodloužit o 1 min" else "Odložit o ${alarm?.snoozeMinutes ?: 5} min",
+                    onSystemDialogStart = { awaitingSystemDialog = true },
+                    onSystemDialogEnd = { awaitingSystemDialog = false },
                     onDismiss = {
-                        cancelRelaunch()
+                        stopWatchdog()
                         stopLockTaskSafely()
                         AlarmService.stop(this)
                         if (isTimer) TimerState.clear(this)
@@ -218,7 +231,7 @@ class AlarmActivity : ComponentActivity() {
                         finish()
                     },
                     onSnooze = {
-                        cancelRelaunch()
+                        stopWatchdog()
                         snooze(id, isTimer)
                         stopLockTaskSafely()
                         AlarmService.stop(this)
@@ -242,6 +255,7 @@ class AlarmActivity : ComponentActivity() {
             val at = System.currentTimeMillis() + TimerActionReceiver.EXTEND_MS
             TimerScheduler.schedule(this, at)
             TimerState.save(this, running = true, endAtWallClock = at, totalMs = TimerActionReceiver.EXTEND_MS)
+            TimerService.start(this, at)
         } else {
             val alarm = Alarms.load(this).firstOrNull { it.id == id } ?: return
             val at = System.currentTimeMillis() + alarm.snoozeMinutes * 60_000L
@@ -250,7 +264,7 @@ class AlarmActivity : ComponentActivity() {
     }
 
     override fun onDestroy() {
-        cancelRelaunch()
+        stopWatchdog()
         super.onDestroy()
     }
 }
@@ -393,6 +407,8 @@ fun ChallengeScreen(
     shakeCount: Int,
     snoozeAllowed: Boolean,
     snoozeLabel: String,
+    onSystemDialogStart: () -> Unit,
+    onSystemDialogEnd: () -> Unit,
     onDismiss: () -> Unit,
     onSnooze: () -> Unit
 ) {
@@ -421,6 +437,7 @@ fun ChallengeScreen(
     var hasActivityRecognition by remember { mutableStateOf(hasActivityRecognitionPermission(ctx)) }
     val permissionLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
         hasActivityRecognition = granted
+        onSystemDialogEnd()
     }
     val stepsTarget = stepsCount.coerceAtLeast(1)
     val stepsProgress = if (stepsRequired) rememberStepProgress(stepsTarget, hasActivityRecognition) else null
@@ -600,7 +617,10 @@ fun ChallengeScreen(
                                     )
                                     Spacer(Modifier.height(12.dp))
                                     Button(
-                                        onClick = { permissionLauncher.launch(android.Manifest.permission.ACTIVITY_RECOGNITION) },
+                                        onClick = {
+                                            onSystemDialogStart()
+                                            permissionLauncher.launch(android.Manifest.permission.ACTIVITY_RECOGNITION)
+                                        },
                                         shape = MaterialTheme.shapes.small,
                                         colors = ButtonDefaults.buttonColors(containerColor = Accent, contentColor = OnAccent)
                                     ) { Text("Povolit", fontWeight = FontWeight.Bold) }

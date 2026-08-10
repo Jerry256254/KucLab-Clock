@@ -22,6 +22,8 @@
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
     <!-- Krokoměr pro "vypnutí jen po chůzi" u budíku -->
     <uses-permission android:name="android.permission.ACTIVITY_RECOGNITION" />
+    <!-- Ruční kontrola dostupné aktualizace v Nastavení (dotaz na GitHub Releases API) -->
+    <uses-permission android:name="android.permission.INTERNET" />
 
     <application
         android:allowBackup="true"
@@ -86,13 +88,21 @@
                 android:value="stopwatch_live_status" />
         </service>
 
+        <service
+            android:name=".TimerService"
+            android:exported="false"
+            android:foregroundServiceType="specialUse">
+            <property
+                android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
+                android:value="timer_live_status" />
+        </service>
+
         <receiver
             android:name=".ClockWidgetProvider"
             android:exported="false"
             android:label="@string/widget_name">
             <intent-filter>
                 <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
-                <action android:name="dev.kuclab.clock.action.WIDGET_TICK" />
                 <action android:name="dev.kuclab.clock.action.WIDGET_TICK_ALL" />
             </intent-filter>
             <meta-data

@@ -22,25 +22,72 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
 import dev.kuclab.clock.BuildConfig
 import dev.kuclab.clock.hasNotificationPermission
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import kotlin.math.roundToInt
 
-private const val GITHUB_URL = "https://github.com/Jerry256254/KucLab-Clock"
+private const val GITHUB_OWNER_REPO = "Jerry256254/KucLab-Clock"
+private const val GITHUB_URL = "https://github.com/$GITHUB_OWNER_REPO"
+
+/** Blocking network call - always invoke from Dispatchers.IO. Returns
+ * (version without leading "v", releases page URL) or (null, null) on any failure. */
+private fun fetchLatestRelease(): Pair<String?, String?> {
+    var conn: java.net.HttpURLConnection? = null
+    return try {
+        val url = java.net.URL("https://api.github.com/repos/$GITHUB_OWNER_REPO/releases/latest")
+        conn = (url.openConnection() as java.net.HttpURLConnection).apply {
+            connectTimeout = 8000
+            readTimeout = 8000
+            setRequestProperty("Accept", "application/vnd.github+json")
+        }
+        val body = conn.inputStream.bufferedReader().use { it.readText() }
+        val json = org.json.JSONObject(body)
+        val tag = json.optString("tag_name", "").removePrefix("v").ifBlank { null }
+        val htmlUrl = json.optString("html_url", "https://github.com/$GITHUB_OWNER_REPO/releases/latest")
+        tag to htmlUrl
+    } catch (_: Exception) {
+        null to null
+    } finally {
+        conn?.disconnect()
+    }
+}
+
+/** Lenient numeric dotted-version comparison ("1.10" > "1.9", missing parts treated as 0). */
+private fun isNewerVersion(remote: String, local: String): Boolean {
+    val r = remote.split(".").map { it.toIntOrNull() ?: 0 }
+    val l = local.split(".").map { it.toIntOrNull() ?: 0 }
+    for (i in 0 until maxOf(r.size, l.size)) {
+        val rv = r.getOrElse(i) { 0 }
+        val lv = l.getOrElse(i) { 0 }
+        if (rv != lv) return rv > lv
+    }
+    return false
+}
 
 private fun Context.findActivity(): Activity? {
     var c: Context = this
@@ -73,7 +120,28 @@ fun SettingsScreen() {
         mutableStateOf(audio.getStreamVolume(AudioManager.STREAM_ALARM).toFloat())
     }
 
-    val items = remember {
+    // The permission grants below happen in a *different* activity (system Settings), so
+    // this screen never otherwise learns they changed - without this, "granted" stayed
+    // stuck showing the state from whenever the screen first composed, until the user
+    // happened to leave and re-enter the Nastavení tab (which recreates this composable
+    // from scratch). Re-checking on every resume covers "switch to Settings, grant it,
+    // switch back" without requiring that extra tab round-trip.
+    val lifecycleOwner = LocalLifecycleOwner.current
+    var resumeSignal by remember { mutableStateOf(0) }
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) resumeSignal++
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+    }
+
+    val scope = rememberCoroutineScope()
+    var checkingUpdate by remember { mutableStateOf(false) }
+    var updateStatus by remember { mutableStateOf<String?>(null) }
+    var updateUrl by remember { mutableStateOf<String?>(null) }
+
+    val items = remember(resumeSignal) {
         listOf(
             PermItem(
                 "Oznámení",
@@ -317,6 +385,53 @@ fun SettingsScreen() {
                 lineHeight = 18.sp,
                 modifier = Modifier.padding(top = 10.dp)
             )
+            Spacer(Modifier.height(14.dp))
+            Button(
+                onClick = {
+                    haptics.tap()
+                    checkingUpdate = true
+                    updateStatus = null
+                    updateUrl = null
+                    scope.launch {
+                        val (latest, url) = withContext(Dispatchers.IO) { fetchLatestRelease() }
+                        checkingUpdate = false
+                        when {
+                            latest == null -> updateStatus = "Kontrolu se nepodařilo dokončit — zkuste to znovu"
+                            isNewerVersion(latest, BuildConfig.VERSION_NAME) -> {
+                                updateStatus = "Dostupná nová verze $latest (máte ${BuildConfig.VERSION_NAME})"
+                                updateUrl = url
+                            }
+                            else -> updateStatus = "Máte nejnovější verzi (${BuildConfig.VERSION_NAME})"
+                        }
+                    }
+                },
+                shape = MaterialTheme.shapes.small,
+                colors = ButtonDefaults.buttonColors(containerColor = Accent, contentColor = OnAccent)
+            ) {
+                Text(if (checkingUpdate) "Kontroluji…" else "Zkontrolovat aktualizace", fontWeight = FontWeight.Bold)
+            }
+            updateStatus?.let { status ->
+                Spacer(Modifier.height(10.dp))
+                Text(status, color = if (updateUrl != null) Accent else Muted, fontSize = 13.sp)
+                if (updateUrl != null) {
+                    Spacer(Modifier.height(6.dp))
+                    Row(
+                        Modifier
+                            .hairlineCard(fill = Ink)
+                            .clickable {
+                                haptics.tap()
+                                try {
+                                    ctx.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(updateUrl)))
+                                } catch (_: Exception) {
+                                }
+                            }
+                            .padding(horizontal = 14.dp, vertical = 10.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text("Stáhnout novou verzi", color = Accent, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+                    }
+                }
+            }
             Spacer(Modifier.height(12.dp))
             Row(
                 Modifier

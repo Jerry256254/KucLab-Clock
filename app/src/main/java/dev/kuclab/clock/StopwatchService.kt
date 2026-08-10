@@ -9,7 +9,9 @@ import android.content.Context
 import android.content.Intent
 import android.content.pm.ServiceInfo
 import android.os.Build
+import android.os.Handler
 import android.os.IBinder
+import android.os.Looper
 import androidx.core.content.ContextCompat
 
 /**
@@ -19,12 +21,20 @@ import androidx.core.content.ContextCompat
  * stopwatch to show up on the lock screen / always-on display and sort near the top of the
  * notification shade. It carries no logic of its own: StopwatchScreen owns the actual
  * elapsed-time state and just tells this service when to start/stop.
+ *
+ * While alive it also pushes the home-screen widget's "nearest event" line directly via
+ * [pushWidgetUpdateNow] on a plain in-process Handler loop, instead of the widget scheduling
+ * its own frequent AlarmManager alarms - Android throttles a background app's own frequent
+ * `setExactAndAllowWhileIdle` calls down to roughly hourly, which is exactly the staleness
+ * that was reported ("aktivní tooly se obnovují jen asi každou hodinu"). A running foreground
+ * service isn't subject to that throttling, so ticking from here is reliable.
  */
 class StopwatchService : Service() {
 
     companion object {
         private const val CHANNEL_ID = "stopwatch_channel"
         private const val NOTIF_ID = 2001
+        private const val WIDGET_PUSH_INTERVAL_MS = 15_000L
         const val ACTION_START = "dev.kuclab.clock.action.STOPWATCH_START"
         const val ACTION_STOP = "dev.kuclab.clock.action.STOPWATCH_STOP"
         private const val EXTRA_START_AT = "startAt"
@@ -44,6 +54,14 @@ class StopwatchService : Service() {
                 context.stopService(Intent(context, StopwatchService::class.java))
             } catch (_: Exception) {
             }
+        }
+    }
+
+    private val handler = Handler(Looper.getMainLooper())
+    private val widgetPushLoop = object : Runnable {
+        override fun run() {
+            pushWidgetUpdateNow(this@StopwatchService)
+            handler.postDelayed(this, WIDGET_PUSH_INTERVAL_MS)
         }
     }
 
@@ -78,7 +96,9 @@ class StopwatchService : Service() {
                     .setContentIntent(
                         PendingIntent.getActivity(
                             this, 0,
-                            Intent(this, MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
+                            Intent(this, MainActivity::class.java)
+                                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                                .putExtra("tab", 2),
                             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
                         )
                     )
@@ -88,8 +108,16 @@ class StopwatchService : Service() {
                 } else {
                     startForeground(NOTIF_ID, notification)
                 }
+                handler.removeCallbacks(widgetPushLoop)
+                handler.post(widgetPushLoop)
             }
         }
         return START_NOT_STICKY
+    }
+
+    override fun onDestroy() {
+        handler.removeCallbacks(widgetPushLoop)
+        pushWidgetUpdateNow(this)
+        super.onDestroy()
     }
 }
