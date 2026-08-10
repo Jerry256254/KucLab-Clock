@@ -256,6 +256,28 @@ class AlarmService : Service() {
         isRinging = false
     }
 
+    override fun onTaskRemoved(rootIntent: Intent?) {
+        super.onTaskRemoved(rootIntent)
+        // The user swiped the app card away in Recents while a real alarm was still
+        // ringing - previously this could silence it entirely with no challenge solved.
+        // android:stopWithTask="false" on this service (see AndroidManifest.xml) already
+        // keeps the ringing sound/vibration alive through that; this puts the ringing
+        // screen itself back too, since the task that was hosting it is now gone. Timers
+        // are deliberately excluded, matching every other place in this app where a timer
+        // is allowed to be dismissed gently instead of forced back onto the screen.
+        if (isRinging && !currentIsTimer) {
+            try {
+                startActivity(
+                    Intent(this, AlarmActivity::class.java)
+                        .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                        .putExtra("id", currentId)
+                        .putExtra("timer", false)
+                )
+            } catch (_: Exception) {
+            }
+        }
+    }
+
     override fun onDestroy() {
         stopRing()
         super.onDestroy()

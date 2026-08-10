@@ -2,8 +2,8 @@
 schema_version: 1
 app_name: KucLab Clock
 package_id: dev.kuclab.clock
-version_name: "1.2"
-version_code: 3
+version_name: "1.3"
+version_code: 4
 last_updated: 2026-08-10
 license: MIT
 category: Nástroje
@@ -46,6 +46,12 @@ screenshots:
   - store/screenshots/03_stopky.png
   - store/screenshots/04_casovac.png
 changelog:
+  - version: "1.3"
+    date: 2026-08-10
+    notes:
+      - Budík se nedá zabít vysunutím appky z naposledy použitých - služba přežije a vrátí obrazovku zpět
+      - Widget se teď přizpůsobuje velikosti, na kterou ho na ploše zvětšíte/zmenšíte
+      - "Stabilní podpisový klíč: tahle a všechny další verze se budou instalovat jako update, ne jako smazání a nová instalace (jednorázově je potřeba tuhle verzi nainstalovat přes odinstalování staré)"
   - version: "1.2"
     date: 2026-08-10
     notes:

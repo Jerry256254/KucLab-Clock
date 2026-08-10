@@ -7,7 +7,10 @@ import android.appwidget.AppWidgetProvider
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
+import android.os.Bundle
 import android.os.SystemClock
+import android.util.TypedValue
+import android.view.View
 import android.widget.RemoteViews
 import java.text.SimpleDateFormat
 import java.util.Calendar
@@ -64,9 +67,37 @@ private fun formatShortDuration(ms: Long): String {
  * literally counts up through today's wall-clock time. DateUtils' elapsed-time formatter
  * omits the hour digits below 1h and never zero-pads a single-digit hour, so the wrapping
  * `format` string is swapped once per hour boundary to paper over both cases.
+ *
+ * Text sizes (and whether the status line shows at all) are derived from the widget's
+ * *current* placed size via [AppWidgetManager.getAppWidgetOptions] every time this redraws,
+ * rather than being fixed - a widget dragged out to fill most of a home screen used to look
+ * exactly the same as the smallest possible one, with lots of dead space either way.
  */
-private fun buildRemoteViews(context: Context, now: Long): RemoteViews {
+private fun buildRemoteViews(context: Context, widgetId: Int, now: Long): RemoteViews {
     val views = RemoteViews(context.packageName, R.layout.clock_widget_layout)
+
+    val options = AppWidgetManager.getInstance(context).getAppWidgetOptions(widgetId)
+    val minWidthDp = options.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_WIDTH, 110)
+    val minHeightDp = options.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_HEIGHT, 64)
+    val timeSizeSp = when {
+        minWidthDp < 100 -> 20f
+        minWidthDp < 150 -> 26f
+        minWidthDp < 220 -> 32f
+        minWidthDp < 300 -> 40f
+        else -> 48f
+    }
+    val statusSizeSp = when {
+        minWidthDp < 100 -> 9f
+        minWidthDp < 150 -> 10f
+        minWidthDp < 220 -> 11f
+        else -> 13f
+    }
+    views.setTextViewTextSize(R.id.widget_time, TypedValue.COMPLEX_UNIT_SP, timeSizeSp)
+    views.setTextViewTextSize(R.id.widget_status, TypedValue.COMPLEX_UNIT_SP, statusSizeSp)
+    // Below this height there's only room for one line without clipping/overlap - drop the
+    // status line entirely rather than let it get cut off.
+    views.setViewVisibility(R.id.widget_status, if (minHeightDp < 50) View.GONE else View.VISIBLE)
+
     val cal = Calendar.getInstance()
     val hour = cal.get(Calendar.HOUR_OF_DAY)
     val midnight = (cal.clone() as Calendar).apply {
@@ -105,19 +136,26 @@ private fun buildRemoteViews(context: Context, now: Long): RemoteViews {
 fun pushWidgetUpdateNow(context: Context) {
     val mgr = AppWidgetManager.getInstance(context)
     val ids = mgr.getAppWidgetIds(ComponentName(context, ClockWidgetProvider::class.java))
-    if (ids.isEmpty()) return
     val now = System.currentTimeMillis()
-    val views = buildRemoteViews(context, now)
-    ids.forEach { id -> mgr.updateAppWidget(id, views) }
+    ids.forEach { id -> mgr.updateAppWidget(id, buildRemoteViews(context, id, now)) }
 }
 
 class ClockWidgetProvider : AppWidgetProvider() {
 
     override fun onUpdate(context: Context, appWidgetManager: AppWidgetManager, appWidgetIds: IntArray) {
-        appWidgetIds.forEach { id ->
-            updateWidget(context, id)
-        }
+        appWidgetIds.forEach { id -> updateWidget(context, id) }
         scheduleNextTick(context)
+    }
+
+    override fun onAppWidgetOptionsChanged(
+        context: Context,
+        appWidgetManager: AppWidgetManager,
+        appWidgetId: Int,
+        newOptions: Bundle
+    ) {
+        // The user just resized this widget on their home screen - redraw it immediately
+        // with text sized for the new dimensions instead of waiting for the next hourly tick.
+        updateWidget(context, appWidgetId)
     }
 
     override fun onDisabled(context: Context) {
@@ -138,8 +176,8 @@ class ClockWidgetProvider : AppWidgetProvider() {
     }
 
     private fun updateWidget(context: Context, widgetId: Int) {
-        val views = buildRemoteViews(context, System.currentTimeMillis())
-        AppWidgetManager.getInstance(context).updateAppWidget(widgetId, views)
+        AppWidgetManager.getInstance(context)
+            .updateAppWidget(widgetId, buildRemoteViews(context, widgetId, System.currentTimeMillis()))
     }
 
     private fun hourlyTickPi(context: Context): PendingIntent = PendingIntent.getBroadcast(
