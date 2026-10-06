@@ -4,9 +4,9 @@ import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.SpringSpec
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Box
@@ -18,28 +18,22 @@ import androidx.compose.material3.Shapes
 import androidx.compose.material3.Typography
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.State
 import androidx.compose.runtime.ReadOnlyComposable
+import androidx.compose.runtime.State
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.hapticfeedback.HapticFeedback
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
-import androidx.compose.ui.text.font.Font
-import androidx.compose.ui.text.font.FontFamily
-import androidx.compose.ui.text.font.FontVariation
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import dev.kuclab.clock.R
 import dev.kuclab.clock.WakeScene
 
-/** Deep night palette with cool glass highlights. It stays dark at every system setting so
- * opening the clock beside the bed never produces a white flash. */
+/** A quiet, utility-first palette. The app should feel like an instrument, not chrome. */
 data class ClockColors(
     val bg: Color,
     val surface: Color,
@@ -54,23 +48,20 @@ data class ClockColors(
 )
 
 val MidnightColors = ClockColors(
-    bg = Color(0xFF070A0F),
-    surface = Color(0xFF0D111B),
-    card = Color(0xFF151C2A),
-    hairline = Color(0xFF33405A),
-    ink = Color(0xFFF4F7FC),
-    muted = Color(0xFF929DB2),
-    trackBg = Color(0xFF222B3C),
-    accent = Color(0xFF8DB6FF),
-    onAccent = Color(0xFF07101F),
-    err = Color(0xFFFF7F7A)
+    bg = Color(0xFF0C0D0F),
+    surface = Color(0xFF121417),
+    card = Color(0xFF181A1E),
+    hairline = Color(0xFF2A2D32),
+    ink = Color(0xFFF2F1EC),
+    muted = Color(0xFF96989D),
+    trackBg = Color(0xFF24272C),
+    accent = Color(0xFFFFB45C),
+    onAccent = Color(0xFF211406),
+    err = Color(0xFFFF7870)
 )
 
 val LocalClockColors = staticCompositionLocalOf { MidnightColors }
 
-/** These read through the composition local, so referencing `Ink`/`Accent`/etc. anywhere
- * in the app automatically follows the current light/dark palette - no plumbing needed at
- * call sites beyond staying inside a @Composable. */
 val Ink: Color @Composable @ReadOnlyComposable get() = LocalClockColors.current.bg
 val SurfaceBg: Color @Composable @ReadOnlyComposable get() = LocalClockColors.current.surface
 val CardBg: Color @Composable @ReadOnlyComposable get() = LocalClockColors.current.card
@@ -83,51 +74,15 @@ val OnAccent: Color @Composable @ReadOnlyComposable get() = LocalClockColors.cur
 val ErrRed: Color @Composable @ReadOnlyComposable get() = LocalClockColors.current.err
 
 private val ClockShapes = Shapes(
-    extraSmall = RoundedCornerShape(10.dp),
-    small = RoundedCornerShape(14.dp),
-    medium = RoundedCornerShape(20.dp),
-    large = RoundedCornerShape(26.dp),
-    extraLarge = RoundedCornerShape(32.dp)
+    extraSmall = RoundedCornerShape(8.dp),
+    small = RoundedCornerShape(10.dp),
+    medium = RoundedCornerShape(14.dp),
+    large = RoundedCornerShape(18.dp),
+    extraLarge = RoundedCornerShape(22.dp)
 )
-
-// A single variable font (weight axis) standing in for the whole Urbanist family - one
-// bundled .ttf, every weight below just dials in a different FontVariation.weight().
-@OptIn(androidx.compose.ui.text.ExperimentalTextApi::class)
-val Urbanist = FontFamily(
-    Font(R.font.urbanist, FontWeight.Light, variationSettings = FontVariation.Settings(FontVariation.weight(300))),
-    Font(R.font.urbanist, FontWeight.Normal, variationSettings = FontVariation.Settings(FontVariation.weight(400))),
-    Font(R.font.urbanist, FontWeight.Medium, variationSettings = FontVariation.Settings(FontVariation.weight(500))),
-    Font(R.font.urbanist, FontWeight.SemiBold, variationSettings = FontVariation.Settings(FontVariation.weight(600))),
-    Font(R.font.urbanist, FontWeight.Bold, variationSettings = FontVariation.Settings(FontVariation.weight(700)))
-)
-
-// Every Text() in the app that doesn't explicitly set its own fontFamily (i.e. everything
-// except the live-ticking numeric displays, which stay FontFamily.Monospace on purpose so
-// digits don't jitter width as they change) inherits Urbanist through this.
-private val ClockTypography = Typography().let { base ->
-    Typography(
-        displayLarge = base.displayLarge.copy(fontFamily = Urbanist),
-        displayMedium = base.displayMedium.copy(fontFamily = Urbanist),
-        displaySmall = base.displaySmall.copy(fontFamily = Urbanist),
-        headlineLarge = base.headlineLarge.copy(fontFamily = Urbanist),
-        headlineMedium = base.headlineMedium.copy(fontFamily = Urbanist),
-        headlineSmall = base.headlineSmall.copy(fontFamily = Urbanist),
-        titleLarge = base.titleLarge.copy(fontFamily = Urbanist),
-        titleMedium = base.titleMedium.copy(fontFamily = Urbanist),
-        titleSmall = base.titleSmall.copy(fontFamily = Urbanist),
-        bodyLarge = base.bodyLarge.copy(fontFamily = Urbanist),
-        bodyMedium = base.bodyMedium.copy(fontFamily = Urbanist),
-        bodySmall = base.bodySmall.copy(fontFamily = Urbanist),
-        labelLarge = base.labelLarge.copy(fontFamily = Urbanist),
-        labelMedium = base.labelMedium.copy(fontFamily = Urbanist),
-        labelSmall = base.labelSmall.copy(fontFamily = Urbanist)
-    )
-}
 
 @Composable
 fun KucLabTheme(content: @Composable () -> Unit) {
-    // The clock is primarily used in dark rooms. A single carefully tuned dark palette
-    // avoids the harsh white flash a system-theme switch can cause around wake-up time.
     val palette = MidnightColors
     val scheme = darkColorScheme(
         primary = palette.accent,
@@ -138,7 +93,7 @@ fun KucLabTheme(content: @Composable () -> Unit) {
         onSecondaryContainer = palette.ink,
         background = palette.bg,
         onBackground = palette.ink,
-        surface = palette.bg,
+        surface = palette.surface,
         onSurface = palette.ink,
         surfaceVariant = palette.card,
         onSurfaceVariant = palette.muted,
@@ -146,78 +101,62 @@ fun KucLabTheme(content: @Composable () -> Unit) {
         outline = palette.hairline
     )
     androidx.compose.runtime.CompositionLocalProvider(LocalClockColors provides palette) {
-        MaterialTheme(colorScheme = scheme, shapes = ClockShapes, typography = ClockTypography, content = content)
+        MaterialTheme(
+            colorScheme = scheme,
+            shapes = ClockShapes,
+            typography = Typography(),
+            content = content
+        )
     }
 }
 
-/** Flat surface: 1px hairline border, solid fill, no shadow/gradient/blur. */
+/** A plain elevated surface used for meaningful groups, never for every individual control. */
 @Composable
-fun Modifier.hairlineCard(shape: Shape = RoundedCornerShape(20.dp), fill: Color = CardBg, borderAlpha: Float = 1f): Modifier =
-    this
-        .clip(shape)
-        .background(
-            if (fill == CardBg) {
-                Brush.verticalGradient(
-                    listOf(fill.copy(alpha = 0.88f), fill.copy(alpha = 0.66f))
-                )
-            } else {
-                Brush.linearGradient(listOf(fill, fill))
-            }
-        )
-        .border(width = 1.dp, color = Hairline.copy(alpha = Hairline.alpha * borderAlpha), shape = shape)
+fun Modifier.hairlineCard(
+    shape: Shape = RoundedCornerShape(14.dp),
+    fill: Color = CardBg,
+    borderAlpha: Float = 1f
+): Modifier = this
+    .clip(shape)
+    .background(fill)
+    .border(1.dp, Hairline.copy(alpha = borderAlpha), shape)
 
-/** Restrained glass surface: translucent depth and a fine highlight, without fake blur or
- * decorative chrome that would compete with an alarm's controls. */
+/** Compatibility name for old call sites; the surface is intentionally no longer glassy. */
 @Composable
-fun Modifier.glassCard(shape: Shape = RoundedCornerShape(24.dp)): Modifier =
-    this
-        .clip(shape)
-        .background(
-            Brush.verticalGradient(
-                listOf(CardBg.copy(alpha = 0.84f), SurfaceBg.copy(alpha = 0.68f))
-            )
-        )
-        .border(1.dp, Hairline.copy(alpha = 0.72f), shape)
+fun Modifier.glassCard(shape: Shape = RoundedCornerShape(14.dp)): Modifier =
+    hairlineCard(shape = shape)
 
-private data class ScenePalette(val top: Color, val bottom: Color, val glow: Color, val secondGlow: Color)
+private data class ScenePalette(val top: Color, val bottom: Color, val glow: Color)
 
 private fun scenePalette(scene: WakeScene): ScenePalette = when (scene) {
-    WakeScene.AURORA -> ScenePalette(Color(0xFF07101A), Color(0xFF090B12), Color(0xFF2D8C91), Color(0xFF6E5DB7))
-    WakeScene.DAWN -> ScenePalette(Color(0xFF18101A), Color(0xFF090B10), Color(0xFFD56E55), Color(0xFF8A4A78))
-    WakeScene.DEEP -> ScenePalette(Color(0xFF07101C), Color(0xFF05070C), Color(0xFF235184), Color(0xFF27365F))
-    WakeScene.EMBER -> ScenePalette(Color(0xFF180D0B), Color(0xFF08090D), Color(0xFFCC6438), Color(0xFF79522C))
+    WakeScene.AURORA -> ScenePalette(Color(0xFF0C1213), Color(0xFF090B0D), Color(0xFF4FA09A))
+    WakeScene.DAWN -> ScenePalette(Color(0xFF17100D), Color(0xFF0B0B0C), Color(0xFFD68755))
+    WakeScene.DEEP -> ScenePalette(Color(0xFF0C0F14), Color(0xFF090A0C), Color(0xFF55759A))
+    WakeScene.EMBER -> ScenePalette(Color(0xFF17100B), Color(0xFF0A0A0B), Color(0xFFC86F3D))
 }
 
+/** Scene colour is reserved for the actual wake-up flow, where atmosphere has a purpose. */
 @Composable
 fun WakeSceneBackground(
     scene: WakeScene,
     modifier: Modifier = Modifier,
     content: @Composable BoxScope.() -> Unit
 ) {
-    val p = scenePalette(scene)
+    val palette = scenePalette(scene)
     Box(
         modifier
             .fillMaxSize()
-            .background(Brush.verticalGradient(listOf(p.top, p.bottom)))
+            .background(Brush.verticalGradient(listOf(palette.top, palette.bottom)))
     ) {
         Canvas(Modifier.fillMaxSize()) {
             drawCircle(
                 brush = Brush.radialGradient(
-                    colors = listOf(p.glow.copy(alpha = 0.24f), Color.Transparent),
-                    center = androidx.compose.ui.geometry.Offset(size.width * 0.12f, size.height * 0.12f),
-                    radius = size.width * 0.95f
+                    listOf(palette.glow.copy(alpha = 0.13f), Color.Transparent),
+                    center = androidx.compose.ui.geometry.Offset(size.width * .5f, 0f),
+                    radius = size.width
                 ),
-                radius = size.width * 0.95f,
-                center = androidx.compose.ui.geometry.Offset(size.width * 0.12f, size.height * 0.12f)
-            )
-            drawCircle(
-                brush = Brush.radialGradient(
-                    colors = listOf(p.secondGlow.copy(alpha = 0.16f), Color.Transparent),
-                    center = androidx.compose.ui.geometry.Offset(size.width * 0.94f, size.height * 0.78f),
-                    radius = size.width * 0.82f
-                ),
-                radius = size.width * 0.82f,
-                center = androidx.compose.ui.geometry.Offset(size.width * 0.94f, size.height * 0.78f)
+                radius = size.width,
+                center = androidx.compose.ui.geometry.Offset(size.width * .5f, 0f)
             )
         }
         content()
@@ -226,32 +165,26 @@ fun WakeSceneBackground(
 
 @Composable
 fun AppBackdrop(content: @Composable BoxScope.() -> Unit) =
-    WakeSceneBackground(WakeScene.DEEP, content = content)
+    Box(Modifier.fillMaxSize().background(Ink), content = content)
 
 @Composable
-fun Modifier.hairlinePill(): Modifier = hairlineCard(shape = RoundedCornerShape(50), fill = Ink)
+fun Modifier.hairlinePill(): Modifier =
+    hairlineCard(shape = RoundedCornerShape(50), fill = SurfaceBg)
 
-// Two intensities of haptic tick, kept to the stable HapticFeedbackType API.
 fun HapticFeedback.tap() = performHapticFeedback(HapticFeedbackType.TextHandleMove)
 fun HapticFeedback.confirm() = performHapticFeedback(HapticFeedbackType.LongPress)
 
-/** A calm, slightly bouncy spring used everywhere a value animates in this app - dials,
- * sliders, progress rings, tab crossfades - so motion feels like one consistent material
- * rather than a grab-bag of easing curves. */
 fun <T> motionSpring(): SpringSpec<T> =
-    spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessMediumLow)
+    spring(dampingRatio = Spring.DampingRatioNoBouncy, stiffness = Spring.StiffnessMedium)
 
-/** Tracks a 0.96x "press" scale off the given interaction source's pressed state. Apply the
- * result via `Modifier.graphicsLayer { scaleX = f; scaleY = f }` on the pressable element. */
 @Composable
 fun rememberPressScale(interactionSource: MutableInteractionSource): State<Float> {
     val pressed by interactionSource.collectIsPressedAsState()
-    return animateFloatAsState(if (pressed) 0.96f else 1f, motionSpring(), label = "pressScale")
+    return animateFloatAsState(if (pressed) .98f else 1f, motionSpring(), label = "pressScale")
 }
 
-/** Convenience wrapper: scales down slightly whenever the element is pressed. */
 @Composable
 fun Modifier.pressScale(interactionSource: MutableInteractionSource): Modifier {
     val scale by rememberPressScale(interactionSource)
-    return this.graphicsLayer { scaleX = scale; scaleY = scale }
+    return graphicsLayer { scaleX = scale; scaleY = scale }
 }

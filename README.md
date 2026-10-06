@@ -44,10 +44,10 @@ není z Play Store).
 
 ## Design
 
-Tmavé, klidné rozhraní určené i pro noční použití kombinuje hluboké barevné
-pozadí s jemnými skleněnými plochami, jasnou typografickou hierarchií,
-pružinovými animacemi a haptickou odezvou. Každý budík může mít vlastní ranní
-atmosféru bez rušivých ilustrací nebo přeplácaných efektů.
+Tmavé, klidné rozhraní určené i pro noční použití staví na plochých neutrálních
+plochách, jediné teplé akcentní barvě a jasné typografické hierarchii. Editor
+budíku ukazuje nejdřív jen čas, opakování a název; zvuk, způsob vypnutí a ranní
+volby jsou přehledně seskupené do rozbalovacích sekcí.
 
 ## Sestavení ze zdrojového kódu
 

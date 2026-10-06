@@ -2,8 +2,8 @@
 schema_version: 1
 app_name: KucLab Clock
 package_id: dev.kuclab.clock
-version_name: "1.4"
-version_code: 5
+version_name: "1.5"
+version_code: 6
 last_updated: 2026-10-06
 license: MIT
 category: Nástroje
@@ -28,9 +28,9 @@ full_description: |-
   dalších dnů. Volitelná kontrola probuzení se po několika minutách zeptá,
   jestli jste opravdu vzhůru, a při neodpovědi budík znovu spustí.
 
-  Tmavé rozhraní kombinuje hluboké barevné pozadí, jemné skleněné plochy,
-  čitelnou typografii, pružinové animace a haptickou odezvu bez přeplácaných
-  dekorací.
+  Tmavé rozhraní používá ploché neutrální povrchy, jedinou teplou akcentní
+  barvu a jasnou informační hierarchii. Pokročilé volby budíku jsou dostupné
+  až po rozbalení příslušné sekce, takže základní nastavení zůstává rychlé.
 tags:
   - budík
   - alarm
@@ -51,6 +51,14 @@ screenshots:
   - store/screenshots/03_stopky.png
   - store/screenshots/04_casovac.png
 changelog:
+  - version: "1.5"
+    date: 2026-10-06
+    notes:
+      - Kompletně přepracované UX bez dekorativního glass efektu a zbytečných čipů
+      - Kompaktní navigace, ploché povrchy a jednotná teplá akcentní barva
+      - Nový progresivní editor budíku s českým vstupem času a rozbalovacími sekcemi
+      - Přehlednější seznam budíků bez zkracování důležitých informací
+      - Nové obrazovky hodin, stopek, časovače, nastavení a zvonění
   - version: "1.4"
     date: 2026-10-06
     notes:
@@ -113,8 +121,8 @@ Každý budík má vlastní hlasitost, náběh zvuku, atmosféru a ranní zpráv
 Opakovaný budík lze jednorázově přeskočit a kontrola probuzení jej při
 neodpovědi znovu spustí.
 
-Tmavé rozhraní používá hluboké barevné pozadí, jemné skleněné plochy,
-čitelnou typografii, pružinové animace a haptickou odezvu.
+Tmavé rozhraní používá ploché neutrální povrchy, teplý akcent a čitelnou
+typografii. Pokročilé volby budíku jsou seskupené do rozbalovacích sekcí.
 
 ## Logo
 

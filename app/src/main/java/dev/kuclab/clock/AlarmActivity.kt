@@ -493,14 +493,6 @@ fun ChallengeScreen(
         SimpleDateFormat("EEEE d. MMMM", Locale("cs")).format(Calendar.getInstance().time)
     }
 
-    val breathing = rememberInfiniteTransition(label = "breathing")
-    val pulse by breathing.animateFloat(
-        initialValue = 0.55f,
-        targetValue = 1f,
-        animationSpec = infiniteRepeatable(tween(1400, easing = LinearEasing), RepeatMode.Reverse),
-        label = "pulseAlpha"
-    )
-
     WakeSceneBackground(wakeScene) {
         Box(
             Modifier
@@ -512,24 +504,14 @@ fun ChallengeScreen(
                 Modifier.padding(24.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                Box(contentAlignment = Alignment.Center) {
-                    Box(
-                        Modifier
-                            .size(14.dp)
-                            .clip(CircleShape)
-                            .background(Accent.copy(alpha = pulse))
-                    )
-                }
-                Spacer(Modifier.height(14.dp))
                 Text(
-                    (if (isTimer) "ČASOVAČ DOBĚHL" else "BUDÍK").uppercase(Locale("cs")),
-                    color = Muted,
-                    letterSpacing = 4.sp,
-                    fontSize = 13.sp,
+                    if (isTimer) "Časovač skončil" else "Budík zvoní",
+                    color = Accent,
+                    fontSize = 14.sp,
                     fontWeight = FontWeight.SemiBold
                 )
-                Spacer(Modifier.height(8.dp))
-                Text(alarmLabel, color = OnDark, fontSize = 24.sp, fontWeight = FontWeight.SemiBold)
+                Spacer(Modifier.height(10.dp))
+                Text(alarmLabel, color = OnDark, fontSize = 26.sp, fontWeight = FontWeight.SemiBold)
                 if (!isTimer && wakeMessage.isNotBlank()) {
                     Spacer(Modifier.height(8.dp))
                     Text(
@@ -545,7 +527,7 @@ fun ChallengeScreen(
                 Text(
                     timeNow,
                     fontFamily = FontFamily.Monospace,
-                    fontSize = 52.sp,
+                    fontSize = 58.sp,
                     fontWeight = FontWeight.Light,
                     color = OnDark
                 )

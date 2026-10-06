@@ -1,6 +1,13 @@
+import java.util.Properties
+
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
+}
+
+val localProperties = Properties().apply {
+    val propertiesFile = rootProject.file("local.properties")
+    if (propertiesFile.exists()) propertiesFile.inputStream().use { load(it) }
 }
 
 // A dedicated signing key kept OUTSIDE this repo, at a stable path in the user's own
@@ -14,6 +21,7 @@ plugins {
 // different machine), the build quietly falls back to the platform's normal debug signing
 // instead of failing - it just won't update cleanly over a build signed with this key.
 val kuclabKeystore = file(System.getProperty("user.home") + "/.android/kuclab-clock.keystore")
+val kuclabKeystorePassword = localProperties.getProperty("kuclab.keystorePassword")
 
 android {
     namespace = "dev.kuclab.clock"
@@ -23,30 +31,30 @@ android {
         applicationId = "dev.kuclab.clock"
         minSdk = 26
         targetSdk = 34
-        versionCode = 5
-        versionName = "1.4"
+        versionCode = 6
+        versionName = "1.5"
     }
 
     signingConfigs {
-        if (kuclabKeystore.exists()) {
+        if (kuclabKeystore.exists() && kuclabKeystorePassword != null) {
             create("kuclab") {
                 storeFile = kuclabKeystore
-                storePassword = "KucLabClock-signing-2026"
+                storePassword = kuclabKeystorePassword
                 keyAlias = "kuclab"
-                keyPassword = "KucLabClock-signing-2026"
+                keyPassword = kuclabKeystorePassword
             }
         }
     }
 
     buildTypes {
         debug {
-            if (kuclabKeystore.exists()) {
+            if (signingConfigs.names.contains("kuclab")) {
                 signingConfig = signingConfigs.getByName("kuclab")
             }
         }
         release {
             isMinifyEnabled = false
-            if (kuclabKeystore.exists()) {
+            if (signingConfigs.names.contains("kuclab")) {
                 signingConfig = signingConfigs.getByName("kuclab")
             }
         }

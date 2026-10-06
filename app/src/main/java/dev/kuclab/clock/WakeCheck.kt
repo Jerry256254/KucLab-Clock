@@ -204,8 +204,8 @@ private fun WakeCheckScreen(alarm: Alarm, onAwake: () -> Unit) {
                     .padding(horizontal = 24.dp, vertical = 30.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                Text("KONTROLA PROBUZENÍ", color = Accent, letterSpacing = 3.sp, fontSize = 12.sp)
-                Spacer(Modifier.height(18.dp))
+                Text("Kontrola probuzení", color = Accent, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
+                Spacer(Modifier.height(14.dp))
                 Text("Jsi opravdu vzhůru?", color = OnDark, fontSize = 30.sp, fontWeight = FontWeight.SemiBold)
                 Spacer(Modifier.height(10.dp))
                 Text(
