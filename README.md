@@ -15,6 +15,9 @@ není z Play Store).
 - **Hodiny** — velký ciferník s přesnými sekundami a datem.
 - **Budík**
   - libovolný počet budíků, opakování podle dní v týdnu
+  - vlastní hlasitost a délka pozvolného zesílení pro každý budík; po vypnutí se vrátí původní systémová hlasitost
+  - jednorázové přeskočení nejbližšího zvonění bez vypnutí dalších dnů
+  - volitelná ranní atmosféra, osobní zpráva a kontrola probuzení, která při neodpovědi budík znovu spustí
   - vyzvánění: výběr ze systémových tónů nebo tří vestavěných tónů appky
   - volitelné odložení (nastavitelný počet minut) — lze u konkrétního budíku i
     úplně vypnout
@@ -41,10 +44,10 @@ není z Play Store).
 
 ## Design
 
-Vizuální jazyk appky vychází z Claude (Anthropic) — teplá krémová/uhlová
-paleta, jílově-oranžová accent barva, klidné pružinové animace a haptická
-odezva na každém posuvníku a přepínači. Appka respektuje systémový světlý i
-tmavý režim.
+Tmavé, klidné rozhraní určené i pro noční použití kombinuje hluboké barevné
+pozadí s jemnými skleněnými plochami, jasnou typografickou hierarchií,
+pružinovými animacemi a haptickou odezvou. Každý budík může mít vlastní ranní
+atmosféru bez rušivých ilustrací nebo přeplácaných efektů.
 
 ## Sestavení ze zdrojového kódu
 

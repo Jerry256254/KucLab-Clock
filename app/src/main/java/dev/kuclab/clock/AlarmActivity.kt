@@ -77,6 +77,7 @@ import dev.kuclab.clock.ui.Ink
 import dev.kuclab.clock.ui.Muted
 import dev.kuclab.clock.ui.OnDark
 import dev.kuclab.clock.ui.TrackBg
+import dev.kuclab.clock.ui.WakeSceneBackground
 import dev.kuclab.clock.ui.confirm
 import dev.kuclab.clock.ui.hairlineCard
 import kotlin.math.sqrt
@@ -220,11 +221,16 @@ class AlarmActivity : ComponentActivity() {
                     shakeCount = alarm?.shakeCount ?: 15,
                     snoozeAllowed = isTimer || (alarm?.snooze ?: true),
                     snoozeLabel = if (isTimer) "Prodloužit o 1 min" else "Odložit o ${alarm?.snoozeMinutes ?: 5} min",
+                    wakeScene = WakeScene.fromId(alarm?.wakeScene),
+                    wakeMessage = alarm?.wakeMessage.orEmpty(),
                     onSystemDialogStart = { awaitingSystemDialog = true },
                     onSystemDialogEnd = { awaitingSystemDialog = false },
                     onDismiss = {
                         stopWatchdog()
                         stopLockTaskSafely()
+                        if (!isTimer && alarm?.wakeCheckEnabled == true) {
+                            WakeCheckScheduler.schedule(this, alarm)
+                        }
                         AlarmService.stop(this)
                         if (isTimer) TimerState.clear(this)
                         WidgetRefresh.requestUpdate(this)
@@ -407,6 +413,8 @@ fun ChallengeScreen(
     shakeCount: Int,
     snoozeAllowed: Boolean,
     snoozeLabel: String,
+    wakeScene: WakeScene,
+    wakeMessage: String,
     onSystemDialogStart: () -> Unit,
     onSystemDialogEnd: () -> Unit,
     onDismiss: () -> Unit,
@@ -493,7 +501,7 @@ fun ChallengeScreen(
         label = "pulseAlpha"
     )
 
-    Box(Modifier.fillMaxSize().background(Ink)) {
+    WakeSceneBackground(wakeScene) {
         Box(
             Modifier
                 .fillMaxSize()
@@ -522,6 +530,15 @@ fun ChallengeScreen(
                 )
                 Spacer(Modifier.height(8.dp))
                 Text(alarmLabel, color = OnDark, fontSize = 24.sp, fontWeight = FontWeight.SemiBold)
+                if (!isTimer && wakeMessage.isNotBlank()) {
+                    Spacer(Modifier.height(8.dp))
+                    Text(
+                        wakeMessage,
+                        color = Accent,
+                        fontSize = 15.sp,
+                        fontWeight = FontWeight.Medium
+                    )
+                }
                 Spacer(Modifier.height(6.dp))
                 Text(today.replaceFirstChar { it.uppercase(Locale("cs")) }, color = Muted, fontSize = 13.sp)
                 Spacer(Modifier.height(10.dp))

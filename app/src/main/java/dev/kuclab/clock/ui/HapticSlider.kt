@@ -28,7 +28,7 @@ import kotlin.math.roundToInt
  * A modern linear slider replacing the old rotary "bezel" dials: drag anywhere along the
  * track to set [value] within [valueRange], snapped to [stepSize], with a haptic tick each
  * time the snapped value changes. Fill and thumb settle into place with the app's shared
- * [claudeSpring] so every drag ends with the same soft, calm motion.
+ * [motionSpring] so every drag ends with the same soft, calm motion.
  */
 @Composable
 fun HapticSlider(
@@ -58,7 +58,7 @@ fun HapticSlider(
     }
 
     val fraction = ((value - valueRange.start) / span).coerceIn(0f, 1f)
-    val animatedFraction by animateFloatAsState(fraction, claudeSpring(), label = "sliderFraction")
+    val animatedFraction by animateFloatAsState(fraction, motionSpring(), label = "sliderFraction")
 
     BoxWithConstraints(
         modifier

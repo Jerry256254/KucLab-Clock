@@ -101,7 +101,7 @@ fun TimerScreen() {
                     (remainingMs.toFloat() / totalMs.toFloat()).coerceIn(0f, 1f)
                 } else 0f
                 val animatedFraction by androidx.compose.animation.core.animateFloatAsState(
-                    fraction, claudeSpring(), label = "timerRing"
+                    fraction, motionSpring(), label = "timerRing"
                 )
 
                 // Canvas's onDraw lambda runs in the draw phase, not composition, so the

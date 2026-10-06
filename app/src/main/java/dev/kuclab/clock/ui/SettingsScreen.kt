@@ -6,7 +6,6 @@ import android.app.Activity
 import android.content.Context
 import android.content.ContextWrapper
 import android.content.Intent
-import android.media.AudioManager
 import android.net.Uri
 import android.os.Build
 import android.os.PowerManager
@@ -49,7 +48,6 @@ import dev.kuclab.clock.hasNotificationPermission
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import kotlin.math.roundToInt
 
 private const val GITHUB_OWNER_REPO = "Jerry256254/KucLab-Clock"
 private const val GITHUB_URL = "https://github.com/$GITHUB_OWNER_REPO"
@@ -114,12 +112,6 @@ fun SettingsScreen() {
     val pm = ctx.getSystemService(PowerManager::class.java)
     val am = ctx.getSystemService(AlarmManager::class.java)
     val nm = ctx.getSystemService(NotificationManager::class.java)
-    val audio = ctx.getSystemService(AudioManager::class.java)
-    val maxAlarmVolume = remember { audio.getStreamMaxVolume(AudioManager.STREAM_ALARM).toFloat() }
-    var alarmVolume by remember {
-        mutableStateOf(audio.getStreamVolume(AudioManager.STREAM_ALARM).toFloat())
-    }
-
     // The permission grants below happen in a *different* activity (system Settings), so
     // this screen never otherwise learns they changed - without this, "granted" stayed
     // stuck showing the state from whenever the screen first composed, until the user
@@ -156,7 +148,7 @@ fun SettingsScreen() {
             PermItem(
                 "Přesné časování budíků",
                 "Zaručí, že budík zazvoní přesně v nastavenou dobu",
-                granted = am.canScheduleExactAlarms(),
+                granted = Build.VERSION.SDK_INT < 31 || am.canScheduleExactAlarms(),
                 buttonText = "Zapnout"
             ) {
                 try {
@@ -208,46 +200,6 @@ fun SettingsScreen() {
             .verticalScroll(rememberScrollState())
             .padding(16.dp)
     ) {
-        Text(
-            "HLASITOST",
-            color = Accent,
-            letterSpacing = 3.sp,
-            fontSize = 12.sp,
-            fontWeight = FontWeight.Bold,
-            modifier = Modifier.padding(start = 4.dp, bottom = 10.dp)
-        )
-        Column(
-            Modifier
-                .fillMaxWidth()
-                .hairlineCard()
-                .padding(horizontal = 20.dp, vertical = 20.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            Text(
-                "${if (maxAlarmVolume > 0) (alarmVolume / maxAlarmVolume * 100).roundToInt() else 0}%",
-                color = OnDark,
-                fontWeight = FontWeight.Bold,
-                fontSize = 20.sp
-            )
-            Spacer(Modifier.height(4.dp))
-            Text("Hlasitost budíku", color = Muted, fontSize = 13.sp)
-            Spacer(Modifier.height(14.dp))
-            HapticSlider(
-                value = alarmVolume,
-                onValueChange = { v ->
-                    alarmVolume = v
-                    try {
-                        audio.setStreamVolume(AudioManager.STREAM_ALARM, v.roundToInt(), 0)
-                    } catch (_: SecurityException) {
-                    }
-                },
-                valueRange = 0f..maxAlarmVolume.coerceAtLeast(1f),
-                stepSize = 1f,
-                modifier = Modifier.fillMaxWidth()
-            )
-        }
-
-        Spacer(Modifier.height(22.dp))
         Text(
             "OPRÁVNĚNÍ",
             color = Accent,

@@ -28,6 +28,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -47,6 +48,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import dev.kuclab.clock.ui.AppIcons
+import dev.kuclab.clock.ui.AppBackdrop
 import dev.kuclab.clock.ui.KucLabTheme
 import dev.kuclab.clock.ui.ClockScreen
 import dev.kuclab.clock.ui.AlarmScreen
@@ -60,6 +62,7 @@ import dev.kuclab.clock.ui.TimerScreen
 import dev.kuclab.clock.ui.SettingsScreen
 import dev.kuclab.clock.ui.rememberPressScale
 import dev.kuclab.clock.ui.tap
+import dev.kuclab.clock.ui.glassCard
 
 class MainActivity : ComponentActivity() {
 
@@ -79,13 +82,8 @@ class MainActivity : ComponentActivity() {
         ) {
             missing += Manifest.permission.POST_NOTIFICATIONS
         }
-        // Needed for the alarm's optional step-counting "prove you're up" gate - requested
-        // up front so it's already granted by the time an alarm actually rings.
-        if (Build.VERSION.SDK_INT >= 29 &&
-            checkSelfPermission(Manifest.permission.ACTIVITY_RECOGNITION) != PackageManager.PERMISSION_GRANTED
-        ) {
-            missing += Manifest.permission.ACTIVITY_RECOGNITION
-        }
+        // Activity recognition is intentionally requested only when the user enables a
+        // step challenge. Asking for it on the first launch felt unrelated and intrusive.
         if (missing.isNotEmpty()) {
             requestPermissions(missing.toTypedArray(), 10)
         }
@@ -126,8 +124,8 @@ fun MainScreen(requestedTab: Int? = null, onRequestedTabConsumed: () -> Unit = {
         }
     }
 
-    Box(Modifier.fillMaxSize().background(Ink)) {
-        Box(Modifier.fillMaxSize().padding(bottom = 76.dp)) {
+    AppBackdrop {
+        Box(Modifier.fillMaxSize().padding(bottom = 94.dp)) {
             AnimatedContent(
                 targetState = tab,
                 transitionSpec = { fadeIn() togetherWith fadeOut() },
@@ -160,13 +158,17 @@ private fun BottomBar(
     modifier: Modifier = Modifier
 ) {
     val haptics = LocalHapticFeedback.current
-    Column(modifier.fillMaxWidth().background(Ink)) {
-        Box(Modifier.fillMaxWidth().height(1.dp).background(Hairline))
+    Box(
+        modifier
+            .fillMaxWidth()
+            .windowInsetsPadding(WindowInsets.navigationBars)
+            .padding(horizontal = 12.dp, vertical = 10.dp)
+    ) {
         Row(
             Modifier
                 .fillMaxWidth()
-                .windowInsetsPadding(WindowInsets.navigationBars)
-                .padding(vertical = 10.dp)
+                .glassCard(RoundedCornerShape(28.dp))
+                .padding(horizontal = 4.dp, vertical = 8.dp)
         ) {
             tabs.forEachIndexed { i, t ->
                 val isSelected = selected == i

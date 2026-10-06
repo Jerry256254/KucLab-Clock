@@ -68,6 +68,10 @@ import dev.kuclab.clock.AlarmScheduler
 import dev.kuclab.clock.Alarms
 import dev.kuclab.clock.BuiltInTones
 import dev.kuclab.clock.WidgetRefresh
+import dev.kuclab.clock.WakeScene
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 import kotlin.random.Random
 
 private val shortDays = listOf("Po", "Út", "St", "Čt", "Pá", "So", "Ne")
@@ -176,6 +180,7 @@ fun AlarmScreen() {
                 contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 14.dp, bottom = 110.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
+                item { AlarmOverview(alarms) }
                 items(alarms.sortedBy { it.hour * 60 + it.minute }, key = { it.id }) { a ->
                     AlarmCard(
                         alarm = a,
@@ -184,6 +189,20 @@ fun AlarmScreen() {
                             haptics.tap()
                             alarms = Alarms.setEnabled(ctx, a.id, on)
                             applySchedule(a.copy(enabled = on))
+                        },
+                        onSkipNext = {
+                            haptics.confirm()
+                            val updated = if (
+                                a.skippedOccurrenceAt != null && a.skippedOccurrenceAt > System.currentTimeMillis()
+                            ) {
+                                a.copy(skippedOccurrenceAt = null)
+                            } else {
+                                AlarmScheduler.skipNext(a) ?: a
+                            }
+                            AlarmScheduler.cancel(ctx, a)
+                            alarms = Alarms.upsert(ctx, updated)
+                            AlarmScheduler.schedule(ctx, updated)
+                            WidgetRefresh.requestUpdate(ctx)
                         }
                     )
                 }
@@ -211,46 +230,99 @@ fun AlarmScreen() {
 private fun AlarmCard(
     alarm: Alarm,
     onClick: () -> Unit,
-    onToggle: (Boolean) -> Unit
+    onToggle: (Boolean) -> Unit,
+    onSkipNext: () -> Unit
 ) {
-    Row(
+    Column(
         Modifier
             .fillMaxWidth()
-            .hairlineCard(borderAlpha = if (alarm.enabled) 1f else 0.5f)
+            .glassCard()
             .clickable(onClick = onClick)
-            .padding(start = 18.dp, top = 14.dp, bottom = 14.dp, end = 10.dp),
-        verticalAlignment = Alignment.CenterVertically
+            .padding(start = 18.dp, top = 16.dp, bottom = 12.dp, end = 12.dp)
     ) {
-        Column(Modifier.weight(1f)) {
-            Text(
-                String.format("%02d:%02d", alarm.hour, alarm.minute),
-                fontSize = 34.sp,
-                fontWeight = FontWeight.SemiBold,
-                fontFamily = FontFamily.Monospace,
-                color = if (alarm.enabled) OnDark else Muted
-            )
-            if (alarm.label.isNotBlank()) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Column(Modifier.weight(1f)) {
                 Text(
-                    alarm.label,
-                    color = Muted,
-                    fontSize = 13.sp,
+                    String.format("%02d:%02d", alarm.hour, alarm.minute),
+                    fontSize = 38.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    fontFamily = FontFamily.Monospace,
+                    color = if (alarm.enabled) OnDark else Muted
+                )
+                Text(
+                    alarm.label.ifBlank { Alarm.daySummary(alarm.days) },
+                    color = if (alarm.enabled) Accent else Muted,
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.Medium,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
             }
-            Text(
-                Alarm.daySummary(alarm.days),
-                color = if (alarm.enabled) Accent else Muted,
-                fontSize = 12.sp,
-                fontWeight = FontWeight.Medium
+            Switch(
+                checked = alarm.enabled,
+                onCheckedChange = onToggle,
+                colors = SwitchDefaults.colors(checkedTrackColor = Accent)
             )
         }
-        Switch(
-            checked = alarm.enabled,
-            onCheckedChange = onToggle,
-            colors = SwitchDefaults.colors(checkedTrackColor = Accent)
+        Spacer(Modifier.height(10.dp))
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            AlarmMeta("${alarm.volumePercent}% hlasitost")
+            AlarmMeta(if (alarm.fadeInSeconds == 0) "Bez zesílení" else "Náběh ${alarm.fadeInSeconds} s")
+            if (alarm.wakeCheckEnabled) AlarmMeta("Kontrola +${alarm.wakeCheckDelayMinutes} min")
+        }
+        if (alarm.days.isNotEmpty() && alarm.enabled) {
+            val isSkipped = alarm.skippedOccurrenceAt?.let { it > System.currentTimeMillis() } == true
+            TextButton(
+                onClick = onSkipNext,
+                contentPadding = PaddingValues(horizontal = 0.dp, vertical = 0.dp)
+            ) {
+                Text(
+                    if (isSkipped) {
+                        val whenText = SimpleDateFormat("EEE HH:mm", Locale("cs"))
+                            .format(Date(alarm.skippedOccurrenceAt!!))
+                        "Vrátit příští zvonění ($whenText)"
+                    } else "Přeskočit jen příští zvonění",
+                    color = if (isSkipped) Muted else Accent,
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.SemiBold
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun AlarmOverview(alarms: List<Alarm>) {
+    val active = alarms.count { it.enabled }
+    val next = alarms.filter { it.enabled }
+        .mapNotNull { alarm -> AlarmScheduler.nextTrigger(alarm)?.let { alarm to it } }
+        .minByOrNull { it.second }
+    Column(
+        Modifier.fillMaxWidth().padding(horizontal = 4.dp, vertical = 8.dp)
+    ) {
+        Text("Ráno pod kontrolou", color = OnDark, fontSize = 26.sp, fontWeight = FontWeight.SemiBold)
+        Text(
+            if (next == null) {
+                "$active aktivních budíků"
+            } else {
+                val whenText = SimpleDateFormat("EEEE HH:mm", Locale("cs")).format(Date(next.second))
+                "Další: $whenText · ${next.first.volumePercent}%"
+            },
+            color = Muted,
+            fontSize = 13.sp,
+            modifier = Modifier.padding(top = 4.dp)
         )
     }
+}
+
+@Composable
+private fun AlarmMeta(text: String) {
+    Text(
+        text,
+        color = Muted,
+        fontSize = 11.sp,
+        modifier = Modifier.hairlinePill().padding(horizontal = 10.dp, vertical = 6.dp)
+    )
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -283,6 +355,19 @@ private fun AlarmEditDialog(
     var shakeRequired by remember(initial?.id) { mutableStateOf(initial?.shakeRequired ?: false) }
     var shakeCount by remember(initial?.id) { mutableStateOf((initial?.shakeCount ?: 15).toFloat()) }
     var ringtoneUri by remember(initial?.id) { mutableStateOf(initial?.ringtoneUri) }
+    var volumePercent by remember(initial?.id) { mutableStateOf((initial?.volumePercent ?: 80).toFloat()) }
+    var fadeInSeconds by remember(initial?.id) { mutableStateOf((initial?.fadeInSeconds ?: 20).toFloat()) }
+    var wakeScene by remember(initial?.id) {
+        mutableStateOf(WakeScene.fromId(initial?.wakeScene))
+    }
+    var wakeMessage by remember(initial?.id) { mutableStateOf(initial?.wakeMessage ?: "") }
+    var wakeCheckEnabled by remember(initial?.id) { mutableStateOf(initial?.wakeCheckEnabled ?: false) }
+    var wakeCheckDelay by remember(initial?.id) {
+        mutableStateOf((initial?.wakeCheckDelayMinutes ?: 5).toFloat())
+    }
+    var wakeCheckTimeout by remember(initial?.id) {
+        mutableStateOf((initial?.wakeCheckTimeoutMinutes ?: 2).toFloat())
+    }
 
     // The M3 TimePicker has no built-in haptic callback of its own, so a tick is fired here
     // any time the chosen hour or minute actually changes.
@@ -396,7 +481,10 @@ private fun AlarmEditDialog(
             Spacer(Modifier.height(20.dp))
 
             Text("Vyzvánění", color = Muted, fontSize = 13.sp, modifier = Modifier.padding(bottom = 8.dp))
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        Row(
+            Modifier.horizontalScroll(rememberScrollState()),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
                 BuiltInTones.all.forEach { tone ->
                     val selected = builtIn?.id == tone.id
                     FilterChip(
@@ -429,6 +517,49 @@ private fun AlarmEditDialog(
                     Text("Jiný tón…", color = OnDark, fontSize = 14.sp, fontWeight = FontWeight.Medium)
                     Text(ringtoneSummary, color = Accent, fontSize = 12.sp)
                 }
+            }
+
+            Spacer(Modifier.height(20.dp))
+            Text("Hlasitost tohoto budíku", color = Muted, fontSize = 13.sp)
+            Spacer(Modifier.height(8.dp))
+            Column(
+                Modifier.fillMaxWidth().glassCard().padding(16.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Text(
+                    "${volumePercent.toInt()} %",
+                    color = OnDark,
+                    fontSize = 24.sp,
+                    fontWeight = FontWeight.Bold
+                )
+                Text(
+                    "Před zvoněním se nastaví automaticky a po vypnutí se vrátí původní úroveň.",
+                    color = Muted,
+                    fontSize = 12.sp
+                )
+                Spacer(Modifier.height(12.dp))
+                HapticSlider(
+                    value = volumePercent,
+                    onValueChange = { volumePercent = it },
+                    valueRange = 10f..100f,
+                    stepSize = 5f,
+                    modifier = Modifier.fillMaxWidth()
+                )
+                Spacer(Modifier.height(12.dp))
+                Text(
+                    if (fadeInSeconds.toInt() == 0) "Okamžitě naplno" else "Pozvolné zesílení: ${fadeInSeconds.toInt()} s",
+                    color = OnDark,
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.Medium
+                )
+                Spacer(Modifier.height(8.dp))
+                HapticSlider(
+                    value = fadeInSeconds,
+                    onValueChange = { fadeInSeconds = it },
+                    valueRange = 0f..60f,
+                    stepSize = 5f,
+                    modifier = Modifier.fillMaxWidth()
+                )
             }
 
             Spacer(Modifier.height(20.dp))
@@ -541,6 +672,100 @@ private fun AlarmEditDialog(
                 }
             }
 
+            Spacer(Modifier.height(26.dp))
+            Text(
+                "RANNÍ ATMOSFÉRA",
+                color = Accent,
+                letterSpacing = 3.sp,
+                fontSize = 12.sp,
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier.fillMaxWidth()
+            )
+            Spacer(Modifier.height(10.dp))
+            Row(
+                Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                WakeScene.entries.forEach { scene ->
+                    FilterChip(
+                        selected = wakeScene == scene,
+                        onClick = { haptics.tap(); wakeScene = scene },
+                        label = { Text(scene.label, fontSize = 13.sp) },
+                        colors = FilterChipDefaults.filterChipColors(
+                            containerColor = CardBg,
+                            labelColor = Muted,
+                            selectedContainerColor = Accent,
+                            selectedLabelColor = OnAccent
+                        )
+                    )
+                }
+            }
+            Text(
+                wakeScene.description,
+                color = Muted,
+                fontSize = 12.sp,
+                modifier = Modifier.fillMaxWidth().padding(top = 6.dp)
+            )
+            Spacer(Modifier.height(12.dp))
+            OutlinedTextField(
+                value = wakeMessage,
+                onValueChange = { wakeMessage = it.take(80) },
+                label = { Text("Ranní zpráva") },
+                placeholder = { Text("Např. Dnes začni pomalu.") },
+                supportingText = { Text("Zobrazí se přímo na obrazovce zvonění") },
+                modifier = Modifier.fillMaxWidth(),
+                maxLines = 2
+            )
+
+            Spacer(Modifier.height(18.dp))
+            Column(Modifier.fillMaxWidth().glassCard().padding(16.dp)) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Column(Modifier.weight(1f)) {
+                        Text("Ověřit, že jsem vzhůru", color = OnDark, fontWeight = FontWeight.SemiBold)
+                        Text(
+                            "Po vypnutí se ozve kontrola. Bez odpovědi se budík obnoví.",
+                            color = Muted,
+                            fontSize = 12.sp
+                        )
+                    }
+                    Switch(
+                        checked = wakeCheckEnabled,
+                        onCheckedChange = { haptics.tap(); wakeCheckEnabled = it },
+                        colors = SwitchDefaults.colors(checkedTrackColor = Accent)
+                    )
+                }
+                if (wakeCheckEnabled) {
+                    Spacer(Modifier.height(16.dp))
+                    Text(
+                        "Zeptat se za ${wakeCheckDelay.toInt()} min",
+                        color = OnDark,
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.Medium
+                    )
+                    HapticSlider(
+                        value = wakeCheckDelay,
+                        onValueChange = { wakeCheckDelay = it },
+                        valueRange = 1f..15f,
+                        stepSize = 1f,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    Spacer(Modifier.height(10.dp))
+                    Text(
+                        "Čas na odpověď: ${wakeCheckTimeout.toInt()} min",
+                        color = OnDark,
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.Medium
+                    )
+                    HapticSlider(
+                        value = wakeCheckTimeout,
+                        onValueChange = { wakeCheckTimeout = it },
+                        valueRange = 1f..5f,
+                        stepSize = 1f,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
+            }
+
             Spacer(Modifier.height(24.dp))
             Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                 val saveInteraction = remember { MutableInteractionSource() }
@@ -563,7 +788,19 @@ private fun AlarmEditDialog(
                                 stepsRequired = stepsRequired,
                                 stepsCount = stepsCount.toInt(),
                                 shakeRequired = shakeRequired,
-                                shakeCount = shakeCount.toInt()
+                                shakeCount = shakeCount.toInt(),
+                                volumePercent = volumePercent.toInt(),
+                                fadeInSeconds = fadeInSeconds.toInt(),
+                                wakeScene = wakeScene.id,
+                                wakeMessage = wakeMessage.trim(),
+                                wakeCheckEnabled = wakeCheckEnabled,
+                                wakeCheckDelayMinutes = wakeCheckDelay.toInt(),
+                                wakeCheckTimeoutMinutes = wakeCheckTimeout.toInt(),
+                                skippedOccurrenceAt = initial?.skippedOccurrenceAt?.takeIf {
+                                    initial.hour == timeState.hour &&
+                                        initial.minute == timeState.minute &&
+                                        initial.days == days.sorted()
+                                }
                             )
                         )
                     },

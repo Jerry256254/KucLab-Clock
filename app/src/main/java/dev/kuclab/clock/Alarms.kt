@@ -23,7 +23,22 @@ data class Alarm(
     val stepsRequired: Boolean = false,
     val stepsCount: Int = 20,
     val shakeRequired: Boolean = false,
-    val shakeCount: Int = 15
+    val shakeCount: Int = 15,
+    // Volume is intentionally stored per alarm. AlarmService applies it immediately before
+    // playback and restores the previous system alarm volume when ringing stops.
+    val volumePercent: Int = 80,
+    val fadeInSeconds: Int = 20,
+    // The ringing surface can have a different restrained atmosphere for each alarm.
+    val wakeScene: String = WakeScene.AURORA.id,
+    val wakeMessage: String = "",
+    // Optional second line of defence: ask for confirmation after the alarm was dismissed,
+    // then ring again if the prompt is ignored.
+    val wakeCheckEnabled: Boolean = false,
+    val wakeCheckDelayMinutes: Int = 5,
+    val wakeCheckTimeoutMinutes: Int = 2,
+    // Exact occurrence that should be ignored. Keeping the timestamp rather than a boolean
+    // means edits/reboots cannot accidentally skip the wrong weekday.
+    val skippedOccurrenceAt: Long? = null
 ) {
     fun toJson(): JSONObject = JSONObject().apply {
         put("id", id)
@@ -40,6 +55,14 @@ data class Alarm(
         put("stepsCount", stepsCount)
         put("shakeRequired", shakeRequired)
         put("shakeCount", shakeCount)
+        put("volumePercent", volumePercent)
+        put("fadeInSeconds", fadeInSeconds)
+        put("wakeScene", wakeScene)
+        put("wakeMessage", wakeMessage)
+        put("wakeCheckEnabled", wakeCheckEnabled)
+        put("wakeCheckDelayMinutes", wakeCheckDelayMinutes)
+        put("wakeCheckTimeoutMinutes", wakeCheckTimeoutMinutes)
+        put("skippedOccurrenceAt", skippedOccurrenceAt)
         put("days", JSONArray().apply { days.forEach { put(it) } })
     }
 
@@ -64,7 +87,19 @@ data class Alarm(
                 stepsRequired = o.optBoolean("stepsRequired", false),
                 stepsCount = o.optInt("stepsCount", 20),
                 shakeRequired = o.optBoolean("shakeRequired", false),
-                shakeCount = o.optInt("shakeCount", 15)
+                shakeCount = o.optInt("shakeCount", 15),
+                volumePercent = o.optInt("volumePercent", 80).coerceIn(10, 100),
+                fadeInSeconds = o.optInt("fadeInSeconds", 20).coerceIn(0, 60),
+                wakeScene = WakeScene.fromId(o.optString("wakeScene")).id,
+                wakeMessage = o.optString("wakeMessage", ""),
+                wakeCheckEnabled = o.optBoolean("wakeCheckEnabled", false),
+                wakeCheckDelayMinutes = o.optInt("wakeCheckDelayMinutes", 5).coerceIn(1, 15),
+                wakeCheckTimeoutMinutes = o.optInt("wakeCheckTimeoutMinutes", 2).coerceIn(1, 5),
+                skippedOccurrenceAt = if (!o.has("skippedOccurrenceAt") || o.isNull("skippedOccurrenceAt")) {
+                    null
+                } else {
+                    o.optLong("skippedOccurrenceAt").takeIf { it > 0L }
+                }
             )
         }
 
@@ -80,6 +115,17 @@ data class Alarm(
             if (days == listOf(1, 2, 3, 4, 5)) return "Pracovní dny"
             return days.sorted().joinToString(", ") { dayNames[it] ?: "" }
         }
+    }
+}
+
+enum class WakeScene(val id: String, val label: String, val description: String) {
+    AURORA("aurora", "Polární záře", "Chladná, klidná a čistá"),
+    DAWN("dawn", "První světlo", "Teplý úsvit bez ostrého jasu"),
+    DEEP("deep", "Hluboká noc", "Minimální modrá pro citlivé oči"),
+    EMBER("ember", "Žhavé ráno", "Energický jantarový akcent");
+
+    companion object {
+        fun fromId(id: String?): WakeScene = entries.firstOrNull { it.id == id } ?: AURORA
     }
 }
 

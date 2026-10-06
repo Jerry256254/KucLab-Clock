@@ -21,7 +21,11 @@ class AlarmReceiver : BroadcastReceiver() {
             Alarms.setEnabled(context, id, false)
             AlarmScheduler.cancel(context, alarm)
         } else if (alarm.enabled) {
-            AlarmScheduler.schedule(context, alarm)
+            // A stored skip has served its purpose once a later occurrence actually fires.
+            val nextAlarm = if (alarm.skippedOccurrenceAt != null) {
+                alarm.copy(skippedOccurrenceAt = null).also { Alarms.upsert(context, it) }
+            } else alarm
+            AlarmScheduler.schedule(context, nextAlarm)
         }
     }
 }

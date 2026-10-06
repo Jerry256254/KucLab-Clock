@@ -64,6 +64,8 @@ class AlarmService : Service() {
     private var notifId = 1001
     private var currentId: Long = -1L
     private var currentIsTimer: Boolean = false
+    private var previousAlarmVolume: Int? = null
+    private var fadeInSeconds: Int = 0
     private val handler = Handler(Looper.getMainLooper())
 
     override fun onBind(intent: Intent?): IBinder? = null
@@ -96,6 +98,7 @@ class AlarmService : Service() {
                 }
                 currentId = id
                 currentIsTimer = isTimer
+                prepareAlarmAudio()
                 notifId = 1000 + (id % 100_000).toInt()
                 isRinging = true
                 startForegroundCompat(notifId, buildNotification(label, id, isTimer))
@@ -184,6 +187,24 @@ class AlarmService : Service() {
             ?: RingtoneManager.getDefaultUri(RingtoneManager.TYPE_ALARM)
     }
 
+    private fun prepareAlarmAudio() {
+        fadeInSeconds = 0
+        if (currentIsTimer) return
+        val alarm = Alarms.load(this).firstOrNull { it.id == currentId } ?: return
+        fadeInSeconds = alarm.fadeInSeconds.coerceIn(0, 60)
+        try {
+            val audio = getSystemService(AudioManager::class.java)
+            previousAlarmVolume = audio.getStreamVolume(AudioManager.STREAM_ALARM)
+            val max = audio.getStreamMaxVolume(AudioManager.STREAM_ALARM)
+            val target = kotlin.math.round(max * alarm.volumePercent.coerceIn(10, 100) / 100f)
+                .toInt()
+                .coerceIn(1, max.coerceAtLeast(1))
+            audio.setStreamVolume(AudioManager.STREAM_ALARM, target, 0)
+        } catch (_: Exception) {
+            previousAlarmVolume = null
+        }
+    }
+
     private fun startRing() {
         val uri = resolveRingtoneUri()
         if (uri != null) {
@@ -214,14 +235,19 @@ class AlarmService : Service() {
                 }
             }
             handler.post(beepTask!!)
+        } else if (fadeInSeconds <= 0) {
+            player?.setVolume(1f, 1f)
         } else {
             player?.let { p ->
                 handler.post(object : Runnable {
                     var step = 0
                     override fun run() {
                         step++
-                        p.setVolume(step / 26f, step / 26f)
-                        if (step < 26) handler.postDelayed(this, 1000)
+                        val fraction = step / 20f
+                        p.setVolume(fraction, fraction)
+                        if (step < 20) {
+                            handler.postDelayed(this, (fadeInSeconds * 1000L / 20L).coerceAtLeast(100L))
+                        }
                     }
                 })
             }
@@ -249,6 +275,15 @@ class AlarmService : Service() {
         beepTask = null
         vibrator?.cancel()
         vibrator = null
+        previousAlarmVolume?.let { previous ->
+            try {
+                getSystemService(AudioManager::class.java)
+                    .setStreamVolume(AudioManager.STREAM_ALARM, previous, 0)
+            } catch (_: Exception) {
+            }
+        }
+        previousAlarmVolume = null
+        fadeInSeconds = 0
         try {
             getSystemService(NotificationManager::class.java).cancel(notifId)
         } catch (_: Exception) {
